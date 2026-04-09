@@ -3,36 +3,66 @@ import google.generativeai as genai
 import time
 
 # 1. Page Configuration
-st.set_page_config(page_title="AI Chat Assistant", page_icon="✨", layout="wide")
+st.set_page_config(page_title="AI Chat Assistant", page_icon="🌙", layout="wide")
 
-# 2. Inject Custom CSS for a Professional Look
+# 2. Advanced Dark Theme CSS
 st.markdown("""
     <style>
+    /* Main Background */
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(180deg, #0e1117 0%, #1a1c24 100%);
     }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #161b22 !important;
+        border-right: 1px solid #30363d;
+    }
+
+    /* Chat Message Boxes */
     [data-testid="stChatMessage"] {
-        border-radius: 15px;
-        padding: 15px;
-        margin-bottom: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        background-color: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(5px);
+        background-color: #21262d !important;
+        border: 1px solid #30363d !important;
+        border-radius: 15px !important;
+        margin-bottom: 15px !important;
+        color: #ffffff !important; /* Forces text to white */
     }
-    .stSidebar {
-        background-color: rgba(255, 255, 255, 0.5) !important;
+
+    /* Ensure text inside chat is readable */
+    [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li {
+        color: #e6edf3 !important;
+    }
+
+    /* Input Box Styling */
+    .stChatInputContainer {
+        padding-bottom: 20px !important;
+    }
+
+    /* Titles and Text */
+    h1, h2, h3, span, p {
+        color: #ffffff !important;
+    }
+
+    /* Clear Button */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        background-color: #238636;
+        color: white;
+        border: none;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Sidebar for Controls
+# 3. Sidebar
 with st.sidebar:
-    st.title("🤖 Bot Settings")
+    st.title("⚙️ Controls")
     st.markdown("---")
-    if st.button("🗑️ Clear Chat History"):
+    if st.button("🗑️ Clear Chat"):
         st.session_state.messages = []
         st.rerun()
-    st.info("Powered by Gemini 2.5 Flash-Lite")
+    st.markdown("---")
+    st.success("Mode: Dark Stealth")
 
 # 4. API Logic
 if "GEMINI_API_KEY" in st.secrets:
@@ -40,16 +70,16 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
 
-# --- Caching & Response Logic ---
 @st.cache_data(show_spinner=False)
 def get_response(user_query, _model):
     try:
         return _model.generate_content(user_query).text
     except Exception as e:
+        if "429" in str(e): return "Rate limit hit. Please wait a moment."
         return f"Error: {e}"
 
-# 5. Main Chat Interface
-st.title("Pro AI Assistant")
+# 5. Main Interface
+st.title("🌙 Stealth AI Assistant")
 
 if api_key:
     genai.configure(api_key=api_key)
@@ -59,20 +89,19 @@ if api_key:
         st.session_state.messages = []
 
     for message in st.session_state.messages:
-        # Using avatars to make it visual
         avatar = "👤" if message["role"] == "user" else "🤖"
         with st.chat_message(message["role"], avatar=avatar):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("How can I help you?"):
+    if prompt := st.chat_input("Type your message here..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("Thinking..."):
+            with st.spinner("Analyzing..."):
                 response_text = get_response(prompt, model)
                 st.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
 else:
-    st.warning("Please configure your API Key in the sidebar.")
+    st.warning("Please enter your API Key in the sidebar.")
