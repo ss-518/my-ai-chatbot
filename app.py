@@ -2,62 +2,77 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# 1. Setup the Page Layout
-st.set_page_config(page_title="Upgraded AI Chatbot", page_icon="🚀")
-st.title("Pro AI Chatbot")
-st.caption("Now with High-Throughput (Gemini 2.5 Flash-Lite) & Smart Caching")
+# 1. Page Configuration
+st.set_page_config(page_title="AI Chat Assistant", page_icon="✨", layout="wide")
 
-# 2. --- SECRETS & API CONFIGURATION ---
+# 2. Inject Custom CSS for a Professional Look
+st.markdown("""
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    [data-testid="stChatMessage"] {
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(5px);
+    }
+    .stSidebar {
+        background-color: rgba(255, 255, 255, 0.5) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 3. Sidebar for Controls
+with st.sidebar:
+    st.title("🤖 Bot Settings")
+    st.markdown("---")
+    if st.button("🗑️ Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
+    st.info("Powered by Gemini 2.5 Flash-Lite")
+
+# 4. API Logic
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
 
-# 3. --- SMART CACHING FUNCTION ---
-# This saves answers to common questions to save your API quota
-@st.cache_data(show_spinner="AI is thinking...", ttl=3600)  # Caches for 1 hour
-def get_ai_response(user_query, _model_instance):
-    max_retries = 3
-    retry_delay = 5  # Seconds to wait between retries
-    
-    for attempt in range(max_retries):
-        try:
-            response = _model_instance.generate_content(user_query)
-            return response.text
-        except Exception as e:
-            if "429" in str(e) and attempt < max_retries - 1:
-                st.warning(f"Rate limit hit. Retrying in {retry_delay}s... (Attempt {attempt+1}/{max_retries})")
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff (5s, then 10s)
-            else:
-                return f"Error: {e}"
+# --- Caching & Response Logic ---
+@st.cache_data(show_spinner=False)
+def get_response(user_query, _model):
+    try:
+        return _model.generate_content(user_query).text
+    except Exception as e:
+        return f"Error: {e}"
 
-# 4. --- INITIALIZE CHAT ---
+# 5. Main Chat Interface
+st.title("Pro AI Assistant")
+
 if api_key:
     genai.configure(api_key=api_key)
-    # Using the 2.5 Flash-Lite model for maximum free-tier requests
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display previous messages
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        # Using avatars to make it visual
+        avatar = "👤" if message["role"] == "user" else "🤖"
+        with st.chat_message(message["role"], avatar=avatar):
             st.markdown(message["content"])
 
-    # 5. --- CHAT INPUT ---
-    if prompt := st.chat_input("Ask me anything!"):
+    if prompt := st.chat_input("How can I help you?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar="👤"):
             st.markdown(prompt)
 
-        # Use the cached function to get the response
-        full_response = get_ai_response(prompt, model)
-        
-        with st.chat_message("assistant"):
-            st.markdown(full_response)
-        
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        with st.chat_message("assistant", avatar="🤖"):
+            with st.spinner("Thinking..."):
+                response_text = get_response(prompt, model)
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
 else:
-    st.info("Please add your API Key to start.")
+    st.warning("Please configure your API Key in the sidebar.")
