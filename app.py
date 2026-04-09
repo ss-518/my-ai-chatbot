@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 
 # 1. Page Configuration
-st.set_page_config(page_title="Pro AI Assistant", page_icon="🌓", layout="wide")
+st.set_page_config(page_title="Pro AI Assistant", page_icon="🤖", layout="wide")
 
 # 2. Initialize Theme State
 if "theme" not in st.session_state:
